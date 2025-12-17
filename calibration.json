@@ -1,0 +1,25 @@
+{
+  "active_profile": "Alex",
+  "profiles": {
+    "default": {
+      "open": 19.94210932655607,
+      "squint": 9.985841017058053
+    },
+    "Alex": {
+      "open": 15.168892391952278,
+      "squint": 11.168549110959058,
+      "comfort": {
+        "brightness": 25,
+        "font_size": 18
+      }
+    },
+    "Manoj": {
+      "open": 8.024384851351172,
+      "squint": 3.2367499536388147,
+      "comfort": {
+        "brightness": 87,
+        "font_size": 51
+      }
+    }
+  }
+}
