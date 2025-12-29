@@ -47,6 +47,8 @@ BRIGHTNESS_SMOOTH = 0.2
 # DATA STORAGE
 # ============================================================
 
+ANALYTICS_FILE = BASE_DIR / "analytics.json"
+
 def load_data() -> Dict:
     """Load all data from JSON file"""
     if not DATA_FILE.exists():
@@ -66,6 +68,128 @@ def load_data() -> Dict:
 def save_data(data: Dict):
     """Save all data to JSON file"""
     DATA_FILE.write_text(json.dumps(data, indent=2))
+
+def load_analytics() -> Dict:
+    """Load analytics data"""
+    if not ANALYTICS_FILE.exists():
+        default = {"sessions": [], "daily_stats": {}}
+        save_analytics(default)
+        return default
+    return json.loads(ANALYTICS_FILE.read_text())
+
+def save_analytics(data: Dict):
+    """Save analytics data"""
+    ANALYTICS_FILE.write_text(json.dumps(data, indent=2))
+
+# ============================================================
+# SESSION TRACKER - Real-time analytics
+# ============================================================
+
+class SessionTracker:
+    """Track reading session analytics in real-time"""
+    
+    def __init__(self):
+        self.active = False
+        self.start_time = None
+        self.article = "Unknown"
+        self.font_sizes = []
+        self.comfort_scores = []
+        self.adjustments = 0
+        self.strain_events = 0
+        self.last_font = 24
+    
+    def start(self, article: str = "The Future of Human-Computer Interaction"):
+        """Start a new session"""
+        self.active = True
+        self.start_time = time.time()
+        self.article = article
+        self.font_sizes = []
+        self.comfort_scores = []
+        self.adjustments = 0
+        self.strain_events = 0
+        self.last_font = 24
+    
+    def record(self, font_size: int, comfort: int, eye_openness: float):
+        """Record a data point"""
+        if not self.active:
+            return
+        
+        self.font_sizes.append(font_size)
+        self.comfort_scores.append(comfort)
+        
+        # Track adjustments
+        if abs(font_size - self.last_font) > 1:
+            self.adjustments += 1
+        self.last_font = font_size
+        
+        # Track strain events (low eye openness)
+        if eye_openness < 8:
+            self.strain_events += 1
+    
+    def end(self, username: str):
+        """End session and save to analytics"""
+        if not self.active or not self.start_time:
+            return
+        
+        duration = int(time.time() - self.start_time)
+        if duration < 5:  # Skip very short sessions
+            self.active = False
+            return
+        
+        avg_font = sum(self.font_sizes) / len(self.font_sizes) if self.font_sizes else 24
+        avg_comfort = sum(self.comfort_scores) / len(self.comfort_scores) if self.comfort_scores else 75
+        
+        # Determine comfort rating
+        if avg_comfort >= 80:
+            rating = "Excellent"
+        elif avg_comfort >= 60:
+            rating = "Good"
+        elif avg_comfort >= 40:
+            rating = "Fair"
+        else:
+            rating = "Poor"
+        
+        session_data = {
+            "username": username,
+            "article": self.article,
+            "duration": duration,
+            "avg_font": round(avg_font),
+            "avg_comfort": round(avg_comfort),
+            "adjustments": self.adjustments,
+            "strain_events": self.strain_events,
+            "rating": rating,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        # Save to analytics
+        analytics = load_analytics()
+        analytics["sessions"].insert(0, session_data)  # Most recent first
+        analytics["sessions"] = analytics["sessions"][:50]  # Keep last 50 sessions
+        
+        # Update daily stats
+        today = time.strftime("%Y-%m-%d")
+        if today not in analytics["daily_stats"]:
+            analytics["daily_stats"][today] = {
+                "total_time": 0,
+                "articles_read": 0,
+                "avg_comfort": 0,
+                "strain_events": 0,
+                "comfort_samples": []
+            }
+        
+        daily = analytics["daily_stats"][today]
+        daily["total_time"] += duration
+        daily["articles_read"] += 1
+        daily["strain_events"] += self.strain_events
+        daily["comfort_samples"].append(avg_comfort)
+        daily["avg_comfort"] = round(sum(daily["comfort_samples"]) / len(daily["comfort_samples"]))
+        
+        save_analytics(analytics)
+        self.active = False
+        print(f"📊 Session saved: {duration}s, comfort={avg_comfort:.0f}%, adjustments={self.adjustments}")
+
+# Global session tracker
+session_tracker = SessionTracker()
 
 # ============================================================
 # EYE TRACKER - CLEAN IMPLEMENTATION
@@ -284,6 +408,13 @@ class EyeTracker:
                     self.state.face_detected = True
                     self.state.status = "Tracking active"
                 
+                # Record data for analytics
+                session_tracker.record(
+                    font_size=int(self._smoothed_font),
+                    comfort=int(comfort),
+                    eye_openness=avg_openness
+                )
+                
                 # Apply system brightness
                 if HAS_BRIGHTNESS:
                     try:
@@ -448,6 +579,9 @@ def signup():
 @app.route('/api/logout', methods=['POST'])
 def logout():
     """Logout user"""
+    username = session.get('user', 'anonymous')
+    # Save any active session before logout
+    session_tracker.end(username)
     session.pop('user', None)
     tracker.stop()
     return jsonify({'success': True})
@@ -477,6 +611,72 @@ def get_state():
     """Get current state (for initial load)"""
     return jsonify(asdict(tracker.get_state()))
 
+@app.route('/api/analytics')
+def get_analytics():
+    """Get analytics data for dashboard"""
+    username = session.get('user')
+    analytics = load_analytics()
+    
+    # Filter sessions for current user (or all if no user)
+    if username:
+        user_sessions = [s for s in analytics.get('sessions', []) if s.get('user') == username]
+    else:
+        user_sessions = analytics.get('sessions', [])
+    
+    # Calculate summary stats
+    total_time = sum(s.get('duration', 0) for s in user_sessions)
+    total_sessions = len(user_sessions)
+    avg_comfort = 0
+    total_adjustments = sum(s.get('adjustments', 0) for s in user_sessions)
+    total_strain = sum(s.get('strain_events', 0) for s in user_sessions)
+    
+    if user_sessions:
+        comfort_scores = [s.get('avg_comfort', 75) for s in user_sessions if s.get('avg_comfort')]
+        if comfort_scores:
+            avg_comfort = round(sum(comfort_scores) / len(comfort_scores), 1)
+    
+    # Get last 7 sessions for charts
+    recent = user_sessions[-7:] if len(user_sessions) >= 7 else user_sessions
+    
+    # Prepare chart data
+    labels = []
+    durations = []
+    comforts = []
+    font_sizes = []
+    
+    for s in recent:
+        # Format date label
+        ts = s.get('timestamp', '')
+        if ts:
+            try:
+                dt = datetime.fromisoformat(ts)
+                labels.append(dt.strftime('%b %d'))
+            except:
+                labels.append('Session')
+        else:
+            labels.append('Session')
+        
+        durations.append(round(s.get('duration', 0) / 60, 1))  # Convert to minutes
+        comforts.append(s.get('avg_comfort', 75))
+        font_sizes.append(s.get('avg_font_size', 24))
+    
+    return jsonify({
+        'summary': {
+            'total_time': round(total_time / 60, 1),  # Minutes
+            'total_sessions': total_sessions,
+            'avg_comfort': avg_comfort,
+            'total_adjustments': total_adjustments,
+            'total_strain': total_strain
+        },
+        'charts': {
+            'labels': labels,
+            'durations': durations,
+            'comforts': comforts,
+            'font_sizes': font_sizes
+        },
+        'recent_sessions': recent[-5:]  # Last 5 for table
+    })
+
 # ============================================================
 # WEBSOCKET EVENTS
 # ============================================================
@@ -488,9 +688,13 @@ def on_connect():
     emit('state_update', asdict(tracker.get_state()))
 
 @socketio.on('start_tracking')
-def on_start_tracking():
+def on_start_tracking(data=None):
     """Start eye tracking"""
     print("▶️ Start tracking requested")
+    article = "Unknown Article"
+    if data and isinstance(data, dict):
+        article = data.get('article', 'Unknown Article')
+    session_tracker.start(article)
     if tracker.start():
         emit('state_update', asdict(tracker.get_state()))
 
@@ -499,6 +703,9 @@ def on_stop_tracking():
     """Stop eye tracking"""
     print("⏹️ Stop tracking requested")
     tracker.stop()
+    # End session and save analytics
+    username = session.get('user', 'anonymous')
+    session_tracker.end(username)
     emit('state_update', asdict(tracker.get_state()))
 
 @socketio.on('lock')

@@ -1,5 +1,5 @@
 {
-  "active_profile": "Alex",
+  "active_profile": "demo",
   "profiles": {
     "default": {
       "open": 19.94210932655607,
@@ -19,6 +19,14 @@
       "comfort": {
         "brightness": 87,
         "font_size": 51
+      }
+    },
+    "demo": {
+      "open": 12.0,
+      "squint": 6.0,
+      "comfort": {
+        "brightness": 60,
+        "font_size": 24
       }
     }
   }

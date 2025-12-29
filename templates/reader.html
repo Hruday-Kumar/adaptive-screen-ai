@@ -1137,7 +1137,8 @@
         // ============ CONTROL FUNCTIONS ============
         function startAdaptive() {
             isLocked = false;
-            socket.emit('start_tracking');  // This handles both starting and unlocking
+            const articleTitle = document.getElementById('articleTitle').textContent || 'Unknown Article';
+            socket.emit('start_tracking', { article: articleTitle });  // This handles both starting and unlocking
             
             document.getElementById('adaptiveBtn').classList.add('active');
             document.getElementById('lockBtn').classList.remove('active');

@@ -618,25 +618,76 @@
     </main>
 
     <script>
-        // Initialize Chart
+        let comfortChart = null;
+        
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
-            initComfortChart();
+            loadAnalytics();
+            // Auto-refresh every 30 seconds
+            setInterval(loadAnalytics, 30000);
         });
         
-        function initComfortChart() {
+        async function loadAnalytics() {
+            try {
+                const response = await fetch('/api/analytics');
+                const data = await response.json();
+                
+                // Update summary stats
+                updateSummaryStats(data.summary);
+                
+                // Update chart
+                updateChart(data.charts);
+                
+                // Update sessions table
+                updateSessionsTable(data.recent_sessions);
+                
+            } catch (error) {
+                console.error('Failed to load analytics:', error);
+            }
+        }
+        
+        function updateSummaryStats(summary) {
+            // Total time (in minutes)
+            const totalMinutes = summary.total_time || 0;
+            const hours = Math.floor(totalMinutes / 60);
+            const mins = Math.round(totalMinutes % 60);
+            document.getElementById('totalTime').textContent = 
+                hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+            
+            // Articles/Sessions read
+            document.getElementById('articlesRead').textContent = summary.total_sessions || 0;
+            
+            // Average comfort
+            document.getElementById('avgComfort').textContent = 
+                (summary.avg_comfort || 0) + '%';
+            
+            // Strain events
+            document.getElementById('strainEvents').textContent = summary.total_strain || 0;
+        }
+        
+        function updateChart(chartData) {
             const ctx = document.getElementById('comfortChart').getContext('2d');
             
             const gradient = ctx.createLinearGradient(0, 0, 0, 280);
             gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
             gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
             
-            new Chart(ctx, {
+            const labels = chartData.labels.length > 0 ? chartData.labels : ['No data yet'];
+            const comfortData = chartData.comforts.length > 0 ? chartData.comforts : [0];
+            const durationData = chartData.durations.length > 0 ? chartData.durations : [0];
+            
+            // Destroy old chart if exists
+            if (comfortChart) {
+                comfortChart.destroy();
+            }
+            
+            comfortChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    labels: labels,
                     datasets: [{
                         label: 'Comfort Score',
-                        data: [72, 78, 65, 82, 75, 88, 85],
+                        data: comfortData,
                         borderColor: '#3b82f6',
                         backgroundColor: gradient,
                         borderWidth: 3,
@@ -648,13 +699,13 @@
                         pointRadius: 5,
                         pointHoverRadius: 7
                     }, {
-                        label: 'Strain Events',
-                        data: [3, 2, 5, 1, 2, 0, 1],
-                        borderColor: '#ef4444',
+                        label: 'Duration (min)',
+                        data: durationData,
+                        borderColor: '#10b981',
                         borderWidth: 2,
                         fill: false,
                         tension: 0.4,
-                        pointBackgroundColor: '#ef4444',
+                        pointBackgroundColor: '#10b981',
                         pointBorderColor: '#fff',
                         pointBorderWidth: 2,
                         pointRadius: 4,
@@ -693,9 +744,11 @@
                         y1: {
                             position: 'right',
                             min: 0,
-                            max: 10,
                             grid: { display: false },
-                            ticks: { color: '#ef4444' }
+                            ticks: { 
+                                color: '#10b981',
+                                callback: value => value + ' min'
+                            }
                         }
                     },
                     interaction: {
@@ -704,6 +757,85 @@
                     }
                 }
             });
+        }
+        
+        function updateSessionsTable(sessions) {
+            const tbody = document.querySelector('table tbody');
+            
+            if (!sessions || sessions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                            <i class="fas fa-book-open" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+                            No reading sessions yet. Start reading to see your analytics!
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = sessions.map(session => {
+                const duration = session.duration || 0;
+                const mins = Math.floor(duration / 60);
+                const secs = Math.round(duration % 60);
+                const durationStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+                
+                const comfort = session.avg_comfort || 0;
+                let comfortBadge = 'poor';
+                if (comfort >= 80) comfortBadge = 'excellent';
+                else if (comfort >= 60) comfortBadge = 'good';
+                else if (comfort >= 40) comfortBadge = 'fair';
+                
+                const date = session.timestamp ? formatDate(session.timestamp) : 'Unknown';
+                
+                const icons = ['fa-book', 'fa-newspaper', 'fa-file-alt', 'fa-scroll'];
+                const colors = ['rgba(59, 130, 246, 0.2)', 'rgba(16, 185, 129, 0.2)', 
+                               'rgba(139, 92, 246, 0.2)', 'rgba(245, 158, 11, 0.2)'];
+                const textColors = ['var(--accent)', 'var(--success)', 'var(--purple)', 'var(--warning)'];
+                const idx = Math.floor(Math.random() * icons.length);
+                
+                return `
+                    <tr>
+                        <td>
+                            <div class="session-article">
+                                <div class="session-icon" style="background: ${colors[idx]}; color: ${textColors[idx]}">
+                                    <i class="fas ${icons[idx]}"></i>
+                                </div>
+                                <span>${session.article || 'Reading Session'}</span>
+                            </div>
+                        </td>
+                        <td>${durationStr}</td>
+                        <td>${Math.round(session.avg_font_size || 24)}px</td>
+                        <td>${session.adjustments || 0}</td>
+                        <td><span class="badge ${comfortBadge}">${comfortBadge.charAt(0).toUpperCase() + comfortBadge.slice(1)}</span></td>
+                        <td>${date}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function formatDate(isoString) {
+            try {
+                const date = new Date(isoString);
+                const now = new Date();
+                const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+                
+                const timeStr = date.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+                
+                if (diffDays === 0) return `Today, ${timeStr}`;
+                if (diffDays === 1) return `Yesterday, ${timeStr}`;
+                
+                return date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                }) + `, ${timeStr}`;
+            } catch {
+                return 'Unknown';
+            }
         }
         
         async function logout() {

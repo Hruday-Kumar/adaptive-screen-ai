@@ -223,6 +223,20 @@ class EyeTracker:
                 self._away_dimmed = False
         return self.locked
 
+    def lock_settings(self) -> None:
+        """Lock current settings to prevent changes"""
+        with self._lock:
+            self._locked = True
+            self._locked_values["brightness"] = int(self._current_brightness)
+            self._locked_values["font_size"] = int(self._latest_font_size)
+            self._locked_values["openness"] = float(self._open_level)
+
+    def unlock_settings(self) -> None:
+        """Unlock settings to resume adaptive tracking"""
+        with self._lock:
+            self._locked = False
+            self._away_dimmed = False
+
     def set_auto_brightness(self, enabled: bool):
         with self._lock:
             self._auto_brightness = bool(enabled) and sbc is not None
