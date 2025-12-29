@@ -30,3 +30,17 @@ Thumbs.db
 
 # Jupyter
 .ipynb_checkpoints/
+
+# User data and sensitive files
+data.json
+users.json
+calibration.json
+
+# Backup folder (old code)
+backup/
+
+# Old source folder
+src/
+
+# Old simple app
+simple_app.py

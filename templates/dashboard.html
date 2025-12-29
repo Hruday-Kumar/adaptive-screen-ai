@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdaptiveScreen AI - Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.3);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --purple: #8b5cf6;
+            --border: rgba(255,255,255,0.1);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .nav-link {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .nav-link:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        .nav-link.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        
+        /* Main Content */
+        .main {
+            padding: 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .page-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .stat-icon.blue { background: rgba(59, 130, 246, 0.2); color: var(--accent); }
+        .stat-icon.green { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .stat-icon.purple { background: rgba(139, 92, 246, 0.2); color: var(--purple); }
+        .stat-icon.orange { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        
+        .stat-trend {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .stat-trend.up { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .stat-trend.down { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        /* Charts Section */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .chart-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .chart-tabs {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .chart-tab {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: none;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .chart-tab.active {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .chart-container {
+            height: 280px;
+            position: relative;
+        }
+        
+        /* Comfort Breakdown */
+        .comfort-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .comfort-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .comfort-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .comfort-info {
+            flex: 1;
+        }
+        
+        .comfort-label {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        
+        .comfort-bar {
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .comfort-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s;
+        }
+        
+        .comfort-value {
+            font-size: 14px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: right;
+        }
+        
+        /* Sessions Table */
+        .table-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .table-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .session-article {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .session-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge.excellent { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .badge.good { background: rgba(59, 130, 246, 0.2); color: var(--accent); }
+        .badge.fair { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .badge.poor { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        
+        /* Insights */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 32px;
+        }
+        
+        .insight-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+        }
+        
+        .insight-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .insight-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .insight-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+            .insights-grid { grid-template-columns: 1fr; }
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .main { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon"><i class="fas fa-eye"></i></div>
+            <span>AdaptiveScreen AI</span>
+        </div>
+        <nav class="nav-links">
+            <a href="/reader" class="nav-link"><i class="fas fa-book-reader"></i> Reader</a>
+            <a href="/calibrate" class="nav-link"><i class="fas fa-sliders-h"></i> Calibrate</a>
+            <a href="/dashboard" class="nav-link active"><i class="fas fa-chart-line"></i> Dashboard</a>
+            <a href="/" class="nav-link" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </nav>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main">
+        <h1 class="page-title">📊 Reading Analytics</h1>
+        <p class="page-subtitle">Track your reading patterns and eye health over time</p>
+        
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon blue"><i class="fas fa-clock"></i></div>
+                    <div class="stat-trend up"><i class="fas fa-arrow-up"></i> 12%</div>
+                </div>
+                <div class="stat-value" id="totalTime">2h 34m</div>
+                <div class="stat-label">Total Reading Time</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon green"><i class="fas fa-book"></i></div>
+                    <div class="stat-trend up"><i class="fas fa-arrow-up"></i> 8%</div>
+                </div>
+                <div class="stat-value" id="articlesRead">12</div>
+                <div class="stat-label">Articles Read</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon purple"><i class="fas fa-smile"></i></div>
+                    <div class="stat-trend up"><i class="fas fa-arrow-up"></i> 5%</div>
+                </div>
+                <div class="stat-value" id="avgComfort">78%</div>
+                <div class="stat-label">Average Comfort Score</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon orange"><i class="fas fa-eye-slash"></i></div>
+                    <div class="stat-trend down"><i class="fas fa-arrow-down"></i> 15%</div>
+                </div>
+                <div class="stat-value" id="strainEvents">8</div>
+                <div class="stat-label">Strain Events This Week</div>
+            </div>
+        </div>
+        
+        <!-- Charts -->
+        <div class="charts-grid">
+            <!-- Eye Comfort Over Time -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">👁️ Eye Comfort Trends</h3>
+                    <div class="chart-tabs">
+                        <button class="chart-tab active">Week</button>
+                        <button class="chart-tab">Month</button>
+                        <button class="chart-tab">Year</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="comfortChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Comfort Breakdown -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">📈 Comfort Breakdown</h3>
+                </div>
+                <div class="comfort-list">
+                    <div class="comfort-item">
+                        <div class="comfort-color" style="background: var(--success)"></div>
+                        <div class="comfort-info">
+                            <div class="comfort-label">Excellent (80-100%)</div>
+                            <div class="comfort-bar"><div class="comfort-fill" style="width: 45%; background: var(--success)"></div></div>
+                        </div>
+                        <div class="comfort-value">45%</div>
+                    </div>
+                    <div class="comfort-item">
+                        <div class="comfort-color" style="background: var(--accent)"></div>
+                        <div class="comfort-info">
+                            <div class="comfort-label">Good (60-79%)</div>
+                            <div class="comfort-bar"><div class="comfort-fill" style="width: 30%; background: var(--accent)"></div></div>
+                        </div>
+                        <div class="comfort-value">30%</div>
+                    </div>
+                    <div class="comfort-item">
+                        <div class="comfort-color" style="background: var(--warning)"></div>
+                        <div class="comfort-info">
+                            <div class="comfort-label">Fair (40-59%)</div>
+                            <div class="comfort-bar"><div class="comfort-fill" style="width: 18%; background: var(--warning)"></div></div>
+                        </div>
+                        <div class="comfort-value">18%</div>
+                    </div>
+                    <div class="comfort-item">
+                        <div class="comfort-color" style="background: var(--danger)"></div>
+                        <div class="comfort-info">
+                            <div class="comfort-label">Poor (0-39%)</div>
+                            <div class="comfort-bar"><div class="comfort-fill" style="width: 7%; background: var(--danger)"></div></div>
+                        </div>
+                        <div class="comfort-value">7%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reading Sessions -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3 class="table-title">📚 Recent Reading Sessions</h3>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Article</th>
+                        <th>Duration</th>
+                        <th>Avg Font Size</th>
+                        <th>Adjustments</th>
+                        <th>Comfort</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="session-article">
+                                <div class="session-icon" style="background: rgba(59, 130, 246, 0.2); color: var(--accent)">
+                                    <i class="fas fa-microchip"></i>
+                                </div>
+                                <span>The Future of Human-Computer Interaction</span>
+                            </div>
+                        </td>
+                        <td>12:34</td>
+                        <td>22px</td>
+                        <td>15</td>
+                        <td><span class="badge excellent">Excellent</span></td>
+                        <td>Today, 2:30 PM</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="session-article">
+                                <div class="session-icon" style="background: rgba(16, 185, 129, 0.2); color: var(--success)">
+                                    <i class="fas fa-water"></i>
+                                </div>
+                                <span>The Mysteries of Deep Ocean Life</span>
+                            </div>
+                        </td>
+                        <td>18:22</td>
+                        <td>24px</td>
+                        <td>23</td>
+                        <td><span class="badge good">Good</span></td>
+                        <td>Today, 11:15 AM</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="session-article">
+                                <div class="session-icon" style="background: rgba(139, 92, 246, 0.2); color: var(--purple)">
+                                    <i class="fas fa-bed"></i>
+                                </div>
+                                <span>The Science of Healthy Sleep</span>
+                            </div>
+                        </td>
+                        <td>8:45</td>
+                        <td>20px</td>
+                        <td>8</td>
+                        <td><span class="badge excellent">Excellent</span></td>
+                        <td>Yesterday, 9:00 PM</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="session-article">
+                                <div class="session-icon" style="background: rgba(245, 158, 11, 0.2); color: var(--warning)">
+                                    <i class="fas fa-landmark"></i>
+                                </div>
+                                <span>Ancient Civilizations and Their Innovations</span>
+                            </div>
+                        </td>
+                        <td>25:18</td>
+                        <td>28px</td>
+                        <td>42</td>
+                        <td><span class="badge fair">Fair</span></td>
+                        <td>Dec 27, 3:45 PM</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Insights -->
+        <div class="insights-grid">
+            <div class="insight-card">
+                <div class="insight-icon" style="background: rgba(16, 185, 129, 0.2)">💡</div>
+                <h4 class="insight-title">Optimal Reading Time</h4>
+                <p class="insight-text">Your comfort scores are highest between 10 AM - 12 PM. Consider scheduling important reading during this window.</p>
+            </div>
+            
+            <div class="insight-card">
+                <div class="insight-icon" style="background: rgba(59, 130, 246, 0.2)">📏</div>
+                <h4 class="insight-title">Preferred Font Size</h4>
+                <p class="insight-text">Your average comfortable font size is 22px. The system has adapted well to your reading preferences.</p>
+            </div>
+            
+            <div class="insight-card">
+                <div class="insight-icon" style="background: rgba(245, 158, 11, 0.2)">⚠️</div>
+                <h4 class="insight-title">Break Reminder</h4>
+                <p class="insight-text">Long sessions (>20 min) show declining comfort. Take a 5-minute break every 20 minutes for optimal eye health.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Initialize Chart
+        document.addEventListener('DOMContentLoaded', () => {
+            initComfortChart();
+        });
+        
+        function initComfortChart() {
+            const ctx = document.getElementById('comfortChart').getContext('2d');
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
+            gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Comfort Score',
+                        data: [72, 78, 65, 82, 75, 88, 85],
+                        borderColor: '#3b82f6',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }, {
+                        label: 'Strain Events',
+                        data: [3, 2, 5, 1, 2, 0, 1],
+                        borderColor: '#ef4444',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointBackgroundColor: '#ef4444',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#94a3b8',
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        y: {
+                            position: 'left',
+                            min: 0,
+                            max: 100,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { 
+                                color: '#94a3b8',
+                                callback: value => value + '%'
+                            }
+                        },
+                        y1: {
+                            position: 'right',
+                            min: 0,
+                            max: 10,
+                            grid: { display: false },
+                            ticks: { color: '#ef4444' }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+        
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
